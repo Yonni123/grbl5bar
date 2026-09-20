@@ -219,13 +219,51 @@ static st_prep_t prep;
 */
 
 
+void enable_stepper(uint8_t axis)
+{
+  if (bit_istrue(settings.flags,BITFLAG_INVERT_ST_ENABLE)) {
+    if (axis == X_AXIS) {
+      X_STEPPER_DISABLE_PORT |= (1<<X_STEPPER_DISABLE_BIT);
+    } else if (axis == Y_AXIS) {
+      Y_STEPPER_DISABLE_PORT |= (1<<Y_STEPPER_DISABLE_BIT);
+    }
+  }
+  else {
+    if (axis == X_AXIS) {
+      X_STEPPER_DISABLE_PORT &= ~(1<<X_STEPPER_DISABLE_BIT);
+    } else if (axis == Y_AXIS) {
+      Y_STEPPER_DISABLE_PORT &= ~(1<<Y_STEPPER_DISABLE_BIT);
+    }
+  }
+}
+
+
+void disable_stepper(uint8_t axis)
+{
+  if (bit_istrue(settings.flags,BITFLAG_INVERT_ST_ENABLE)) {
+    if (axis == X_AXIS) {
+      X_STEPPER_DISABLE_PORT &= ~(1<<X_STEPPER_DISABLE_BIT);
+    } else if (axis == Y_AXIS) {
+      Y_STEPPER_DISABLE_PORT &= ~(1<<Y_STEPPER_DISABLE_BIT);
+    }
+  }
+  else {
+    if (axis == X_AXIS) {
+      X_STEPPER_DISABLE_PORT |= (1<<X_STEPPER_DISABLE_BIT);
+    } else if (axis == Y_AXIS) {
+      Y_STEPPER_DISABLE_PORT |= (1<<Y_STEPPER_DISABLE_BIT);
+    }
+  }
+}
+
+
 // Stepper state initialization. Cycle should only start if the st.cycle_start flag is
 // enabled. Startup init and limits call this function but shouldn't start the cycle.
 void st_wake_up()
 {
   // Enable stepper drivers.
-  if (bit_istrue(settings.flags,BITFLAG_INVERT_ST_ENABLE)) { STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT); }
-  else { STEPPERS_DISABLE_PORT &= ~(1<<STEPPERS_DISABLE_BIT); }
+  enable_stepper(X_AXIS);
+  enable_stepper(Y_AXIS);
 
   // Initialize stepper output bits to ensure first ISR call does not step.
   st.step_outbits = step_port_invert_mask;
@@ -262,9 +300,15 @@ void st_go_idle()
     delay_ms(settings.stepper_idle_lock_time);
     pin_state = true; // Override. Disable steppers.
   }
-  if (bit_istrue(settings.flags,BITFLAG_INVERT_ST_ENABLE)) { pin_state = !pin_state; } // Apply pin invert.
-  if (pin_state) { STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT); }
-  else { STEPPERS_DISABLE_PORT &= ~(1<<STEPPERS_DISABLE_BIT); }
+
+  if (pin_state) {
+    disable_stepper(X_AXIS);
+    disable_stepper(Y_AXIS);
+  }
+  else {
+    enable_stepper(X_AXIS);
+    enable_stepper(Y_AXIS);
+  }
 }
 
 
@@ -567,7 +611,8 @@ void stepper_init()
 {
   // Configure step and direction interface pins
   STEP_DDR |= STEP_MASK;
-  STEPPERS_DISABLE_DDR |= 1<<STEPPERS_DISABLE_BIT;
+  Y_STEPPER_DISABLE_DDR |= 1<<Y_STEPPER_DISABLE_BIT;
+  X_STEPPER_DISABLE_DDR |= 1<<X_STEPPER_DISABLE_BIT;
   DIRECTION_DDR |= DIRECTION_MASK;
   
   #ifdef ENABLE_DUAL_AXIS

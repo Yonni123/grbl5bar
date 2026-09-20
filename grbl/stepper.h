@@ -56,4 +56,10 @@ void st_update_plan_block_parameters();
 // Called by realtime status reporting if realtime rate reporting is enabled in config.h.
 float st_get_realtime_rate();
 
+// Enable stepper driver for a specific axis.
+void enable_stepper(uint8_t axis);
+
+// Disable stepper driver for a specific axis.
+void disable_stepper(uint8_t axis);
+
 #endif

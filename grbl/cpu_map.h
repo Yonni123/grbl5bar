@@ -46,14 +46,19 @@
   #define DIRECTION_PORT    PORTD
   #define X_DIRECTION_BIT   5  // Uno Digital Pin 5
   #define Y_DIRECTION_BIT   6  // Uno Digital Pin 6
-  #define Z_DIRECTION_BIT   7  // Uno Digital Pin 7
+  #define Z_DIRECTION_BIT   4  // Uno Digital Pin 4 (Digital pin 7 is the EN pin for Y motor, we don't have a Z motor)
   #define DIRECTION_MASK    ((1<<X_DIRECTION_BIT)|(1<<Y_DIRECTION_BIT)|(1<<Z_DIRECTION_BIT)) // All direction bits
 
   // Define stepper driver enable/disable output pin.
-  #define STEPPERS_DISABLE_DDR    DDRB
-  #define STEPPERS_DISABLE_PORT   PORTB
-  #define STEPPERS_DISABLE_BIT    0  // Uno Digital Pin 8
-  #define STEPPERS_DISABLE_MASK   (1<<STEPPERS_DISABLE_BIT)
+  #define Y_STEPPER_DISABLE_DDR    DDRB
+  #define Y_STEPPER_DISABLE_PORT   PORTB
+  #define Y_STEPPER_DISABLE_BIT    0  // Uno Digital Pin 8
+  #define Y_STEPPER_DISABLE_MASK   (1<<Y_STEPPER_DISABLE_BIT)
+  #define X_STEPPER_DISABLE_DDR    DDRD
+  #define X_STEPPER_DISABLE_PORT   PORTD
+  #define X_STEPPER_DISABLE_BIT    7  // Uno Digital Pin 7
+  #define X_STEPPER_DISABLE_MASK   (1<<X_STEPPER_DISABLE_BIT)
+
 
   // Define homing/hard limit switch input pins and limit interrupt vectors.
   // NOTE: All limit bit pins must be on the same port, but not on a port with other input pins (CONTROL).
