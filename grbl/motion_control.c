@@ -200,6 +200,37 @@ void mc_dwell(float seconds)
 }
 
 
+// This is a small helper function that moves the X axis to a safe position
+// so that it doesn't interfere with Y axis homing.
+void move_x_to_safe_position(int32_t steps)
+{
+  float target[N_AXIS];
+  plan_line_data_t pl_data;
+
+  system_convert_array_steps_to_mpos(target, sys_position);
+
+  target[X_AXIS] += (float)steps / settings.steps_per_mm[X_AXIS];
+
+  memset(&pl_data, 0, sizeof(plan_line_data_t));
+
+  pl_data.feed_rate = settings.homing_seek_rate;
+  pl_data.condition = PL_COND_FLAG_SYSTEM_MOTION | PL_COND_FLAG_NO_FEED_OVERRIDE;
+
+  plan_buffer_line(target, &pl_data);
+
+  sys.step_control = STEP_CONTROL_EXECUTE_SYS_MOTION;
+  st_prep_buffer();
+  st_wake_up();
+  disable_stepper(Y_AXIS);  // Disable Y stepper to prevent interference with X homing.
+
+  while (!bit_istrue(sys.step_control, STEP_CONTROL_END_MOTION)) {
+      st_prep_buffer();
+  }
+
+  st_reset();
+}
+
+
 // Perform homing cycle to locate and set machine zero. Only '$H' executes this command.
 // NOTE: There should be no motions in the buffer and Grbl must be in an idle state before
 // executing the homing cycle. This prevents incorrect buffered plans after homing.
@@ -228,7 +259,8 @@ void mc_homing_cycle(uint8_t cycle_mask)
   {
     // Search to engage all axes limit switches at faster homing seek rate.
     limits_go_home(HOMING_CYCLE_0);  // Home X motor
-    limits_go_home(HOMING_CYCLE_1);
+    move_x_to_safe_position(3000); // So it doesn't interfere with Y.
+    limits_go_home(HOMING_CYCLE_1);  // Home Y motor
   }
 
   protocol_execute_realtime(); // Check for reset and set system abort.
