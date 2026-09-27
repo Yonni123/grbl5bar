@@ -22,6 +22,9 @@
 #include "grbl.h"
 
 
+#define HOMING_X_BACKOFF_AFTER_Y_HOME_DEG 180.0 // Degrees to back off X after Y homes to give room for X to home without losing Y position.
+
+
 // Execute linear motion in absolute millimeter coordinates. Feed rate given in millimeters/second
 // unless invert_feed_rate is true. Then the feed_rate means that the motion should be completed in
 // (1 minute)/feed_rate time.
@@ -200,16 +203,19 @@ void mc_dwell(float seconds)
 }
 
 
-// This is a small helper function that moves the X axis to a safe position
-// so that it doesn't interfere with Y axis homing.
-void move_x_to_safe_position(int32_t steps)
+// Move the specified axis by a given number of degrees.
+// Used for moving an axis to a safe position during homing.
+// It is dangerous to call this function manually
+// It might make the arms interfere with each other in certain configurations.
+// Call it with caution and only when you know what you are doing.
+void move_axis_by_angle(uint8_t axis, float angle, uint8_t disable_axis)
 {
   float target[N_AXIS];
   plan_line_data_t pl_data;
 
   system_convert_array_steps_to_mpos(target, sys_position);
 
-  target[X_AXIS] += (float)steps / settings.steps_per_mm[X_AXIS];
+  target[axis] += angle;
 
   memset(&pl_data, 0, sizeof(plan_line_data_t));
 
@@ -221,7 +227,7 @@ void move_x_to_safe_position(int32_t steps)
   sys.step_control = STEP_CONTROL_EXECUTE_SYS_MOTION;
   st_prep_buffer();
   st_wake_up();
-  disable_stepper(Y_AXIS);  // Disable Y stepper to prevent interference with X homing.
+  disable_stepper(disable_axis);  // Disable other axis if specified
 
   while (!bit_istrue(sys.step_control, STEP_CONTROL_END_MOTION)) {
       st_prep_buffer();
@@ -259,7 +265,11 @@ void mc_homing_cycle(uint8_t cycle_mask)
   {
     // Search to engage all axes limit switches at faster homing seek rate.
     limits_go_home(HOMING_CYCLE_0);  // Home X motor
-    move_x_to_safe_position(3000); // So it doesn't interfere with Y.
+
+    // Move X by some degrees while Y is disabled.
+    // This gives room for Y to home itself without losing X position.
+    move_axis_by_angle(X_AXIS, HOMING_X_BACKOFF_AFTER_Y_HOME_DEG, Y_AXIS);
+
     limits_go_home(HOMING_CYCLE_1);  // Home Y motor
   }
 
