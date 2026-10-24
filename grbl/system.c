@@ -179,6 +179,10 @@ uint8_t system_execute_line(char *line)
         case 'H' : // Perform homing cycle [IDLE/ALARM]
           if (bit_isfalse(settings.flags,BITFLAG_HOMING_ENABLE)) {return(STATUS_SETTING_DISABLED); }
           if (system_check_safety_door_ajar()) { return(STATUS_CHECK_DOOR); } // Block if safety door is ajar.
+          if (!spindle_pen_configured()) {  // Block if pen is not configured
+            printPgmString(PSTR("[MSG:Pen not configured, set $30 (PEN_DOWN) and $31 (PEN_UP)]\r\n"));
+            return(ERROR_PEN_NOT_CONFIGURED);
+          }
           sys.state = STATE_HOMING; // Set system state variable
           if (line[2] == 0) {
             mc_homing_cycle(HOMING_CYCLE_ALL);

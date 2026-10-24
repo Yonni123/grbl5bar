@@ -143,6 +143,9 @@ uint8_t gc_execute_line(char *line)
       case 'G':
         // Determine 'G' command and its modal group
         switch(int_value) {
+          case 2: case 3: // Check for G2/G3 arc command. Arc commands are not supported in motor space.
+          printPgmString(PSTR("[MSG:Arc commands (G2/G3) are not supported in motor space]\r\n"));  
+          return(STATUS_GCODE_UNSUPPORTED_COMMAND);  // arcs make no sense in motor space
           case 10: case 28: case 30: case 92:
             // Check for G10/28/30/92 being called with G0/1/2/3/38 on same block.
             // * G43.1 is also an axis command but is not explicitly defined this way.
@@ -160,7 +163,7 @@ uint8_t gc_execute_line(char *line)
               mantissa = 0; // Set to zero to indicate valid non-integer G command.
             }                
             break;
-          case 0: case 1: case 2: case 3: case 38:
+          case 0: case 1: case 38:
             // Check for G0/1/2/3/38 being called with G10/28/30/92 on same block.
             // * G43.1 is also an axis command but is not explicitly defined this way.
             if (axis_command) { FAIL(STATUS_GCODE_AXIS_COMMAND_CONFLICT); } // [Axis word/command conflict]
@@ -428,6 +431,22 @@ uint8_t gc_execute_line(char *line)
   // [4. Set spindle speed ]: S is negative (done.)
   if (bit_isfalse(value_words,bit(WORD_S))) { gc_block.values.s = gc_state.spindle_speed; }
   // bit_false(value_words,bit(WORD_S)); // NOTE: Single-meaning value word. Set at end of error-checking.
+
+  if (bit_istrue(value_words,bit(WORD_S)) || (gc_block.modal.spindle != SPINDLE_DISABLE)) {
+    // Validate S value (which is the pen lift position)
+    float s_value = gc_block.values.s;
+    bool s_val_in_range = is_spindle_value_within_range(s_value);
+    if (!s_val_in_range && s_value != 0.0 && s_value != 1.0) {
+      printPgmString(PSTR("[MSG:Invalid S value for pen lift]\r\n"));
+      printPgmString(PSTR("[MSG:Valid range is "));
+      printInteger(PENLIFT_SERVO_MIN);
+      printPgmString(PSTR("-"));
+      printInteger(PENLIFT_SERVO_MAX);
+      printPgmString(PSTR(" for pen servo]\r\n"));
+      printPgmString(PSTR("[MSG:For direct PEN_UP and PEN_DOWN control, use M3 S0 and M3 S1]\r\n"));
+      FAIL(ERROR_PEN_INVALID_S_VALUE);
+    }
+  }
 
   // [5. Select tool ]: NOT SUPPORTED. Only tracks value. T is negative (done.) Not an integer. Greater than max tool value.
   // bit_false(value_words,bit(WORD_T)); // NOTE: Single-meaning value word. Set at end of error-checking.

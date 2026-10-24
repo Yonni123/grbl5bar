@@ -84,6 +84,10 @@
 #define MESSAGE_SPINDLE_RESTORE 10
 #define MESSAGE_SLEEP_MODE 11
 
+// Define Pen control feedback message codes.
+#define ERROR_PEN_NOT_CONFIGURED  100  // Pen is not configured. Set $30 and $31 to valid S values.
+#define ERROR_PEN_INVALID_S_VALUE 101  // Pen S value is invalid. Valid range is PENLIFT_SERVO_MIN to PENLIFT_SERVO_MAX, and S0/S1 for direct control of pen up/down.
+
 // Prints system status messages.
 void report_status_message(uint8_t status_code);
 

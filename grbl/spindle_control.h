@@ -29,6 +29,13 @@
 #define SPINDLE_STATE_CW       bit(0)
 #define SPINDLE_STATE_CCW      bit(1)
 
+// Pen positions for pen_lift()
+#define PEN_UP    false
+#define PEN_DOWN  true
+
+#define PENLIFT_SERVO_MIN  10   // lowest S allowed (≈ 704 µs)
+#define PENLIFT_SERVO_MAX  40   // highest S allowed (≈ 2624 µs)
+
 
 // Initializes spindle pins and hardware PWM, if enabled.
 void spindle_init();
@@ -53,6 +60,17 @@ uint8_t spindle_get_state();
   
   // Computes 328p-specific PWM register value for the given RPM for quick updating.
   uint8_t spindle_compute_pwm_value(float rpm);
+
+  // Servo helpers (the "spindle" is the pen-lift servo in this fork)
+
+  // true if value is inside the servo clamp window
+  bool is_spindle_value_within_range(float value);   
+
+  // true if both $30 and $31 hold valid servo values
+  uint8_t spindle_pen_configured(void);    
+  
+  // true = pen down, false = pen up
+  bool pen_lift(bool pen_down);           
   
 #else
   

@@ -253,6 +253,18 @@ void mc_homing_cycle(uint8_t cycle_mask)
     }
   #endif
 
+  // Lift the pen up before homing to avoid bumping into stuff
+  if (!pen_lift(PEN_UP)) {
+    // system.c has a guard to prevent homing if pen is not configured.
+    // we should NEVER get here.
+    // if we do, something is very wrong.
+    mc_reset(); // Issue system reset and ensure spindle and coolant are shutdown.
+    printPgmString(PSTR("[MSG:unreachable block reached, something is very wrong]\r\n"));
+    system_set_exec_alarm(ERROR_PEN_NOT_CONFIGURED);
+    return;
+  }
+  
+
   limits_disable(); // Disable hard limits pin change register for cycle duration
 
   // -------------------------------------------------------------------------------------

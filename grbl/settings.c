@@ -284,8 +284,28 @@ uint8_t settings_store_global_setting(uint8_t parameter, float value) {
       case 25: settings.homing_seek_rate = value; break;
       case 26: settings.homing_debounce_delay = int_value; break;
       case 27: settings.homing_pulloff = value; break;
-      case 30: settings.rpm_max = value; spindle_init(); break; // Re-initialize spindle rpm calibration
-      case 31: settings.rpm_min = value; spindle_init(); break; // Re-initialize spindle rpm calibration
+      case 30:
+        if (!is_spindle_value_within_range(value)) { 
+          printPgmString(PSTR("[MSG:Invalid S value for pen lift]\r\n"));
+          printPgmString(PSTR("[MSG:Valid range is "));
+          printInteger(PENLIFT_SERVO_MIN);
+          printPgmString(PSTR("-"));
+          printInteger(PENLIFT_SERVO_MAX);
+          printPgmString(PSTR(" for pen servo]\r\n"));
+          return(STATUS_INVALID_STATEMENT);
+        }
+        settings.rpm_max = value; spindle_init(); break; // $30 = pen-up S value
+      case 31:
+        if (!is_spindle_value_within_range(value)) { 
+          printPgmString(PSTR("[MSG:Invalid S value for pen lift]\r\n"));
+          printPgmString(PSTR("[MSG:Valid range is "));
+          printInteger(PENLIFT_SERVO_MIN);
+          printPgmString(PSTR("-"));
+          printInteger(PENLIFT_SERVO_MAX);
+          printPgmString(PSTR(" for pen servo]\r\n"));
+          return(STATUS_INVALID_STATEMENT);
+        }
+        settings.rpm_min = value; spindle_init(); break; // $31 = pen-down S value
       case 32:
         #ifdef VARIABLE_SPINDLE
           if (int_value) { settings.flags |= BITFLAG_LASER_MODE; }

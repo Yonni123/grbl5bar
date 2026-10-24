@@ -49,7 +49,7 @@
   #define DEFAULT_STEPPER_IDLE_LOCK_TIME 25 // msec (0-254, 255 keeps steppers enabled)
   #define DEFAULT_STATUS_REPORT_MASK 1 // MPos enabled
   #define DEFAULT_JUNCTION_DEVIATION 0.01 // mm
-  #define DEFAULT_ARC_TOLERANCE 0.002 // mm
+  #define DEFAULT_ARC_TOLERANCE 0.3 // amount of seconds to wait for servo pen lift (setting is repurposed for pen lift delay)
   #define DEFAULT_REPORT_INCHES 0 // false
   #define DEFAULT_INVERT_ST_ENABLE 0 // false
   #define DEFAULT_INVERT_LIMIT_PINS 0 // false

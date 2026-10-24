@@ -21,6 +21,10 @@
 
 #include "grbl.h"
 
+// In this fork, $12 (arc_tolerance) holds the pen move delay in SECONDS.
+#define PEN_MOVE_DELAY_SEC (settings.arc_tolerance)
+#define PEN_MOVE_DELAY_MAX_SEC  2.0
+
 
 #ifdef VARIABLE_SPINDLE
   static float pwm_gradient; // Precalulated value to speed up rpm to PWM conversions.
@@ -187,33 +191,63 @@ void spindle_stop()
     }
     
   #else 
+
+  // true if value is a usable servo tick (inside the clamp window)
+  bool is_spindle_value_within_range(float value)
+  {
+    return (value >= PENLIFT_SERVO_MIN && value <= PENLIFT_SERVO_MAX);
+  }
+
+  // true only if BOTH settings hold a usable servo value
+  // This only works because the defaults are 0 and 1000
+  // and the servo range (PENLIFT_SERVO_MIN and PENLIFT_SERVO_MAX) is 10-40.
+  uint8_t spindle_pen_configured(void)
+  {
+    return (is_spindle_value_within_range(settings.rpm_max) &&
+            is_spindle_value_within_range(settings.rpm_min));
+  }
   
-    // Called by spindle_set_state() and step segment generator. Keep routine small and efficient.
-    uint8_t spindle_compute_pwm_value(float rpm) // 328p PWM register is 8-bit.
-    {
-      uint8_t pwm_value;
-      rpm *= (0.010*sys.spindle_speed_ovr); // Scale by spindle speed override value.
-      // Calculate PWM register value based on rpm max/min settings and programmed rpm.
-      if ((settings.rpm_min >= settings.rpm_max) || (rpm >= settings.rpm_max)) {
-        // No PWM range possible. Set simple on/off spindle control pin state.
-        sys.spindle_speed = settings.rpm_max;
-        pwm_value = SPINDLE_PWM_MAX_VALUE;
-      } else if (rpm <= settings.rpm_min) {
-        if (rpm == 0.0) { // S0 disables spindle
-          sys.spindle_speed = 0.0;
-          pwm_value = SPINDLE_PWM_OFF_VALUE;
-        } else { // Set minimum PWM output
-          sys.spindle_speed = settings.rpm_min;
-          pwm_value = SPINDLE_PWM_MIN_VALUE;
-        }
-      } else { 
-        // Compute intermediate PWM value with linear spindle speed model.
-        // NOTE: A nonlinear model could be installed here, if required, but keep it VERY light-weight.
-        sys.spindle_speed = rpm;
-        pwm_value = floor((rpm-settings.rpm_min)*pwm_gradient) + SPINDLE_PWM_MIN_VALUE;
+  uint8_t spindle_compute_pwm_value(float rpm)
+  {
+    if (spindle_pen_configured()) {
+      if (rpm == 1.0)      { rpm = settings.rpm_min; }  // S1 = pen down  ($30)
+      else if (rpm == 0.0) { rpm = settings.rpm_max; }  // S0 = pen up    ($31)
+    } else {
+      if (rpm == 1.0 || rpm == 0.0) {
+        printPgmString(PSTR("[MSG:Pen not configured, set $30 (PEN_DOWN) and $31 (PEN_UP)]\r\n"));
+        return(0);
       }
-      return(pwm_value);
     }
+    if (rpm < PENLIFT_SERVO_MIN || rpm > PENLIFT_SERVO_MAX) {
+      printPgmString(PSTR("[MSG:Invalid S value for pen lift]\r\n"));
+      printPgmString(PSTR("[MSG:Valid range is "));
+      printInteger(PENLIFT_SERVO_MIN);
+      printPgmString(PSTR("-"));
+      printInteger(PENLIFT_SERVO_MAX);
+      printPgmString(PSTR(" for pen servo]\r\n"));
+      printPgmString(PSTR("[MSG:For direct PEN_UP and PEN_DOWN control, use M3 S0 and M3 S1]\r\n"));
+      return(0);
+    }
+
+    sys.spindle_speed = rpm;
+    return (uint8_t)(rpm + 0.5);
+  }
+
+  // Moves the pen: true = pen down, false = pen up.
+  // Returns false and does nothing if $30/$31 are not configured as servo values.
+  bool pen_lift(bool pen_down)
+  {
+    if (!spindle_pen_configured()) { return false; }
+
+    spindle_sync(SPINDLE_ENABLE_CW, pen_down ? settings.rpm_min : settings.rpm_max);  // S1 = down, S0 = up
+    gc_state.spindle_speed = pen_down ? settings.rpm_min : settings.rpm_max;  // Update spindle speed in parser state
+    sys.spindle_speed = gc_state.spindle_speed;  // Update spindle speed in system
+
+    float wait = PEN_MOVE_DELAY_SEC;
+    if (wait > PEN_MOVE_DELAY_MAX_SEC) { wait = PEN_MOVE_DELAY_MAX_SEC; } // guards a stale EEPROM value
+    if (wait > 0.0) { delay_sec(wait, DELAY_MODE_DWELL); }
+    return true;
+  }
     
   #endif
 #endif
