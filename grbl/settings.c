@@ -262,10 +262,12 @@ uint8_t settings_store_global_setting(uint8_t parameter, float value) {
         system_flag_wco_change(); // Make sure WCO is immediately updated.
         break;
       case 20:
-        if (int_value) {
-          if (bit_isfalse(settings.flags, BITFLAG_HOMING_ENABLE)) { return(STATUS_SOFT_LIMIT_ERROR); }
-          settings.flags |= BITFLAG_SOFT_LIMIT_ENABLE;
-        } else { settings.flags &= ~BITFLAG_SOFT_LIMIT_ENABLE; }
+        //if (int_value) {
+        //  if (bit_isfalse(settings.flags, BITFLAG_HOMING_ENABLE)) { return(STATUS_SOFT_LIMIT_ERROR); }
+        //  settings.flags |= BITFLAG_SOFT_LIMIT_ENABLE;
+        //} else { settings.flags &= ~BITFLAG_SOFT_LIMIT_ENABLE; }
+        printPgmString(PSTR("[MSG:Soft limits are HARD disabled in this fork]\r\n"));
+        return(STATUS_INVALID_STATEMENT);
         break;
       case 21:
         if (int_value) { settings.flags |= BITFLAG_HARD_LIMIT_ENABLE; }
