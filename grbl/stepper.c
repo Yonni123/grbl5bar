@@ -995,7 +995,9 @@ void st_prep_buffer()
       }
     } while (mm_remaining > prep.mm_complete); // **Complete** Exit loop. Profile complete.
 
-    #ifdef VARIABLE_SPINDLE
+    prep_segment->spindle_pwm = spindle_compute_pwm_value(sys.spindle_speed); // Reload segment PWM value
+    #ifdef NEVER_DEFINE_THIS
+    //#ifdef VARIABLE_SPINDLE
       /* -----------------------------------------------------------------------------------
         Compute spindle speed PWM output for step segment
       */
